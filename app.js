@@ -18,13 +18,14 @@ let isLocal = process.env.PORT == null;
 var serverPort = (process.env.PORT  || 4443);
 var server = null;
 if (isLocal) {
-  server = require('https').createServer(httpsOptions, app);
+  server = require('http').createServer(app);
 } else {
   server = require('http').createServer(app);
 }
 var io = require('socket.io')(server);
 
 let socketIdToNames = {};
+let babyInRoom = {}
 //------------------------------------------------------------------------------
 //  Serving static files
 app.get('/', function(req, res){
@@ -81,9 +82,11 @@ io.on('connection', function(socket){
   socket.on('join', function(joinData, callback){ //Join room
     let roomId = joinData.roomId;
     let name = joinData.name;
+    let socketId = joinData.socketId
     socket.join(roomId);
     socket.room = roomId;
     socketIdToNames[socket.id] = name;
+    if(name === 'Baby') babyInRoom[roomId] = socketId;
     var socketIds = socketIdsInRoom(roomId);
     let friends = socketIds.map((socketId) => {
       return {
@@ -98,7 +101,7 @@ io.on('connection', function(socket){
         socketId: socket.id, name
       });
     });
-    console.log('Join: ', joinData);
+    console.log('Join: ', joinData, 'baby in room: ', babyInRoom[roomId]);
   });
 
   socket.on('exchange', function(data){
@@ -112,5 +115,10 @@ io.on('connection', function(socket){
     var socketIds = socketIdsInRoom(roomId);
     callback(socketIds.length);
   });
+
+  socket.on('toggleMic', function({roomId}) {
+    const to = io.sockets.connected[babyInRoom[roomId]];
+    if (to) to.emit('toggleMicRequest')
+  })
 
 });

@@ -4,9 +4,6 @@
   "description": "Fork of react-native-webrtc server",
   "main": "app.js",
   "author": "Tho Q Luong",
-  "engines": {
-    "node": "v7.4.0"
-  },
   "scripts": {
     "open": "heroku open",
     "logs": "heroku logs --tail",
