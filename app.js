@@ -28,14 +28,8 @@ let socketIdToNames = {};
 let babyInRoom = {}
 //------------------------------------------------------------------------------
 //  Serving static files
-app.get('/', function(req, res){
-  console.log('get /');
-  res.sendFile(__dirname + '/index.html');
-});
-
-app.get('/draw', function(req, res){
-  console.log('get /');
-  res.sendFile(__dirname + '/draw.html');
+app.get('/', function(){
+  return 'zdarova';
 });
 
 app.use('/style', express.static(path.join(__dirname, 'style')));
