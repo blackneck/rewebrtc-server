@@ -1,52 +1,19 @@
-/**
- * rewebrtc-server project
- *
- * Tho Q Luong <thoqbk@gmail.com>
- * Feb 12, 2017
- */
-
-var express = require('express');
+var express = require("express");
 var app = express();
-var path = require('path');
-var fs = require('fs');
-var open = require('open');
-var httpsOptions = {
-  key: fs.readFileSync('./fake-keys/privatekey.pem'),
-  cert: fs.readFileSync('./fake-keys/certificate.pem')
-};
-let isLocal = process.env.PORT == null;
 var serverPort = (process.env.PORT  || 4443);
 var server = null;
-if (isLocal) {
-  server = require('http').createServer(app);
-} else {
-  server = require('http').createServer(app);
-}
-var io = require('socket.io')(server);
+
+server = require("http").createServer(app);
+
+var io = require("socket.io")(server);
 
 let socketIdToNames = {};
-let babyInRoom = {}
-//------------------------------------------------------------------------------
-//  Serving static files
-app.get('/', function(){
-  return 'zdarova';
-});
+let babyInRoom = {};
 
-app.use('/style', express.static(path.join(__dirname, 'style')));
-app.use('/script', express.static(path.join(__dirname, 'script')));
-app.use('/image', express.static(path.join(__dirname, 'image')));
+server.listen(serverPort);
 
-server.listen(serverPort, function(){
-  console.log('Rewebrtc-server is up and running at %s port', serverPort);
-  if (isLocal) {
-    open('https://localhost:' + serverPort)
-  }
-});
-
-//------------------------------------------------------------------------------
-//  WebRTC Signaling
 function socketIdsInRoom(roomId) {
-  var socketIds = io.nsps['/'].adapter.rooms[roomId];
+  var socketIds = io.nsps["/"].adapter.rooms[roomId];
   if (socketIds) {
     var collection = [];
     for (var key in socketIds) {
@@ -58,14 +25,14 @@ function socketIdsInRoom(roomId) {
   }
 }
 
-io.on('connection', function(socket){
-  console.log('Connection');
-  socket.on('disconnect', function(){
-    console.log('Disconnect');
+io.on("connection", function(socket) {
+  console.log("Connection");
+  socket.on("disconnect", function() {
+    console.log("Disconnect");
     delete socketIdToNames[socket.id];
     if (socket.room) {
       var room = socket.room;
-      io.to(room).emit('leave', socket.id);
+      io.to(room).emit("leave", socket.id);
       socket.leave(room);
     }
   });
@@ -73,36 +40,40 @@ io.on('connection', function(socket){
   /**
    * Callback: list of {socketId, name: name of user}
    */
-  socket.on('join', function(joinData, callback){ //Join room
+  socket.on("join", function(joinData, callback) {
+    //Join room
     let roomId = joinData.roomId;
     let name = joinData.name;
-    let socketId = joinData.socketId
+    let socketId = joinData.socketId;
     socket.join(roomId);
     socket.room = roomId;
     socketIdToNames[socket.id] = name;
-    if(name === 'Baby') babyInRoom[roomId] = socketId;
+    if (name === "Baby") babyInRoom[roomId] = socketId;
     var socketIds = socketIdsInRoom(roomId);
-    let friends = socketIds.map((socketId) => {
-      return {
-        socketId: socketId,
-        name: socketIdToNames[socketId]
-      }
-    }).filter((friend) => friend.socketId != socket.id);
+    let friends = socketIds
+      .map(socketId => {
+        return {
+          socketId: socketId,
+          name: socketIdToNames[socketId]
+        };
+      })
+      .filter(friend => friend.socketId != socket.id);
     callback(friends);
     //broadcast
-    friends.forEach((friend) => {
+    friends.forEach(friend => {
       io.sockets.connected[friend.socketId].emit("join", {
-        socketId: socket.id, name
+        socketId: socket.id,
+        name
       });
     });
-    console.log('Join: ', joinData, 'baby in room: ', babyInRoom[roomId]);
+    console.log("Join: ", joinData, "baby in room: ", babyInRoom[roomId]);
   });
 
-  socket.on('exchange', function(data){
-    console.log('exchange', data);
+  socket.on("exchange", function(data) {
+    console.log("exchange", data);
     data.from = socket.id;
     var to = io.sockets.connected[data.to];
-    to.emit('exchange', data);
+    to.emit("exchange", data);
   });
 
   socket.on("count", function(roomId, callback) {
@@ -110,9 +81,8 @@ io.on('connection', function(socket){
     callback(socketIds.length);
   });
 
-  socket.on('toggleMic', function({roomId}) {
+  socket.on("toggleMic", function({ roomId }) {
     const to = io.sockets.connected[babyInRoom[roomId]];
-    if (to) to.emit('toggleMicRequest')
-  })
-
+    if (to) to.emit("toggleMicRequest");
+  });
 });
